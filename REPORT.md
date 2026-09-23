@@ -60,16 +60,20 @@ bend/
   circuit/
     circuit.bend        # Edge, Circuit, Loop, node_balance, add_loop_current, node_balance_delta(_scaled)
     LAWS.bend            # as 2 leis do módulo A, como `law` (assinatura + hipóteses)
-    PROOF.bend            # as provas -- hoje só a "cola" que aplica as lemas de tests/circuit_assoc.bend
+    PROOF.bend            # as provas -- hoje só a "cola" que aplica as lemas de proofs/circuit_assoc.bend
+    proofs/
+      circuit_assoc.bend    # ~30 lemas: a prova de fato das 2 leis do Circuit (ver §4)
   ising/
     lattice.bend         # Spin, Lattice, Coupling, flip, magnetization, local_energy
     LAWS.bend             # as 3 leis do módulo B
     PROOF.bend             # as provas, ~470 linhas, autocontidas
   tests/
     sint_laws.bend        # associatividade/comutatividade geral de SInt.add -- biblioteca reutilizável
-    circuit_assoc.bend     # ~30 lemas: a prova de fato das 2 leis do Circuit (ver §4)
     circuit_check.bend, ising_mag.bend, pick_test.bend  # demos/scratch menores
   main.bend             # roda os dois módulos, imprime o estado final
+
+docs/
+  index.html            # relatório interativo, servido via GitHub Pages
 
 lean/
   Circuit.lean, Ising.lean   # os mesmos tipos, versão Lean
@@ -310,7 +314,7 @@ por álgebra local: a soma bruta de `SInt` não se decompõe estruturalmente
 sob indução — somas parciais podem ser não-nulas mesmo quando o total é
 zero. É preciso **contar**.
 
-A solução, em `bend/tests/circuit_assoc.bend` (a peça nova desta sessão):
+A solução, em `bend/circuit/proofs/circuit_assoc.bend` (a peça nova desta sessão):
 
 1. **`touch_to.go`/`touch_from.go`**: dois contadores `Nat`, por indução
    sobre as arestas — quantas arestas do laço entram em `n` (`ct`) e
@@ -346,9 +350,9 @@ lista de nós, aplicando `preserves_node_balance` ponto a ponto.
 `bend/circuit/PROOF.bend` (73 linhas) hoje é só a "cola": destrutura
 `Circuit`/`Loop`, aplica as lemas acima às duas leis. O trabalho de
 verdade — a associatividade geral e a ponte de contagem — vive em
-`bend/tests/sint_laws.bend` (308 linhas) e `bend/tests/circuit_assoc.bend`
+`bend/tests/sint_laws.bend` (308 linhas) e `bend/circuit/proofs/circuit_assoc.bend`
 (499 linhas, ~30 lemas), ambos arquivos independentemente checáveis
-(`bend bend/tests/circuit_assoc.bend`). Total honesto do custo de prova do
+(`bend bend/circuit/proofs/circuit_assoc.bend`). Total honesto do custo de prova do
 Circuit: **880 linhas** (73 + 499 + 308).
 
 ## 5. Lado Lean — os dois ajustes que importaram
@@ -393,7 +397,7 @@ Números medidos nesta máquina, nesta sessão, via `bash bench/run.sh`
 | --- | ---: | --- |
 | `bend/ising/PROOF.bend` | 474 | prova (3/3 leis) |
 | `bend/circuit/PROOF.bend` | 73 | cola de prova (importa circuit_assoc.bend) |
-| `bend/tests/circuit_assoc.bend` | 499 | biblioteca de lemas (associatividade+contagem) |
+| `bend/circuit/proofs/circuit_assoc.bend` | 499 | biblioteca de lemas (associatividade+contagem) |
 | `bend/tests/sint_laws.bend` | 308 | `SInt.add` associativo/comutativo (usado só pelo Circuit) |
 | **Bend total (prova)** | **1354** | 474 + 73 + 499 + 308 |
 | `lean/Laws.lean` | 151 | enunciado + prova das 5 leis, juntos |
@@ -423,7 +427,7 @@ Números medidos nesta máquina, nesta sessão, via `bash bench/run.sh`
 | --- | --- | ---: | ---: | ---: |
 | Checagem — Ising | `bend ising/PROOF.bend` | 4.55s | 2.26s | 2.44s |
 | Checagem — Circuit (cola) | `bend circuit/PROOF.bend` | 3.28s | 1.61s | 2.29s |
-| Checagem — Circuit (lemas) | `bend tests/circuit_assoc.bend` | 2.05s | 2.34s | 1.70s |
+| Checagem — Circuit (lemas) | `bend circuit/proofs/circuit_assoc.bend` | 2.05s | 2.34s | 1.70s |
 | Checagem — Laws (incremental) | `lake build Laws` | 413.40s | 30.90s | 20.88s |
 | Execução — demo | `bend main.bend` | 2.79s | 2.07s | 1.58s |
 
@@ -518,7 +522,7 @@ incompatíveis), é possível produzir uma prova de **qualquer** igualdade-alvo
 `{X == Y : T}`: basta `Equal.cong(Bool, T, b => Bool.pick(T, b, X, Y),
 True{}, False{}, h)`. `Bool.pick` reduz livremente nos dois lados (`True{}`
 e `False{}` são literais), então o resultado normaliza exatamente para
-`{X == Y}` — confirmado contra o compilador real (`bend/tests/circuit_assoc.bend`,
+`{X == Y}` — confirmado contra o compilador real (`bend/circuit/proofs/circuit_assoc.bend`,
 `from_diff_zero_implies_eq`, casos-base). Generaliza para qualquer tipo de
 absurdo com discriminador (`Cmp`, `SInt` via projeção de campo, etc.), sem
 precisar inventar um tipo vazio à parte.
@@ -547,7 +551,7 @@ dados reais a hipótese qualitativa de partida do projeto (§1):
   `Nat`/`Int` já provados e táticas de decisão (`omega`, `ring`) que os
   aplicam automaticamente. Em Bend, cada um desses lemas precisou ser
   redescoberto e escrito à mão — o trabalho de `bend/tests/sint_laws.bend`
-  e `bend/tests/circuit_assoc.bend`, juntos, é essencialmente uma
+  e `bend/circuit/proofs/circuit_assoc.bend`, juntos, é essencialmente uma
   mini-biblioteca de aritmética de inteiros que o Lean traz pronta.
 - **Isso não é grátis nem no Lean**: as duas correções do §5 (namespace
   colidindo com Mathlib; reformular um acumulador para recursão direta)
@@ -584,13 +588,6 @@ dados reais a hipótese qualitativa de partida do projeto (§1):
 - **Lei `resume`** (fase avançada, opcional): rodar a simulação em lotes é
   equivalente a rodar tudo de uma vez, testada nos dois módulos — não
   implementada.
-- **Consolidar `bend/tests/circuit_assoc.bend` dentro de
-  `bend/circuit/PROOF.bend`** (opcional, cosmético): hoje a prova real vive
-  num arquivo de teste por escolha deliberada (mantém cada lema
-  independentemente checável durante o desenvolvimento); poderia ser
-  inlined ou reorganizado numa pasta `bend/circuit/proofs/` sem mudar
-  nenhum conteúdo matemático.
-
 ## 10. Apêndice: mapa de arquivos
 
 | Arquivo | Linhas | O que é |
@@ -603,11 +600,12 @@ dados reais a hipótese qualitativa de partida do projeto (§1):
 | `bend/ising/LAWS.bend` | 33 | as 3 leis do Ising |
 | `bend/ising/PROOF.bend` | 474 | prova completa, autocontida |
 | `bend/tests/sint_laws.bend` | 308 | `SInt.add` associativo/comutativo geral |
-| `bend/tests/circuit_assoc.bend` | 499 | ~30 lemas: a prova de fato do Circuit |
+| `bend/circuit/proofs/circuit_assoc.bend` | 499 | ~30 lemas: a prova de fato do Circuit |
 | `bend/tests/circuit_check.bend` | 18 | demo standalone do Circuit |
 | `bend/tests/ising_mag.bend` | 370 | registro histórico da derivação de `diff_inc`/`diff_dec` |
 | `bend/tests/pick_test.bend` | 12 | probe de `Bool.pick` |
 | `bend/main.bend` | — | roda os dois módulos, imprime o estado final |
+| `docs/index.html` | — | relatório interativo, servido via GitHub Pages |
 | `lean/Circuit.lean` | 41 | tipos do Circuit |
 | `lean/Ising.lean` | 34 | tipos do Ising |
 | `lean/Laws.lean` | 151 | as 5 leis, enunciado+prova |

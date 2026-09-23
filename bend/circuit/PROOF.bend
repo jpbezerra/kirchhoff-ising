@@ -36,10 +36,10 @@
 # concretely-known-safe values, never for an arbitrary opaque SInt.
 
 import Base
-import ../circuit/circuit.bend as Circuit
+import ./circuit.bend as Circuit
 import ../int.bend as Int
 import ./LAWS.bend as Laws
-import ../tests/circuit_assoc.bend as CA
+import ./proofs/circuit_assoc.bend as CA
 
 def Laws.preserves_node_balance(c, loop, delta, n, circ):
   match c loop:

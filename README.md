@@ -17,7 +17,9 @@ resistivo (Lei das Correntes de Kirchhoff) e uma rede de spins tipo Ising.
 
 Para o relato completo — a matemática de cada prova, o que travou e como
 foi destravado, os números do benchmark e o que eles significam — ver
-**[REPORT.md](REPORT.md)**.
+**[REPORT.md](REPORT.md)**, ou a versão interativa em
+**https://jpbezerra.github.io/kirchhoff-ising/** (`docs/index.html`, servido
+via GitHub Pages).
 
 ## Estrutura
 
@@ -27,14 +29,15 @@ bend/
   circuit/
     circuit.bend        # Edge, Circuit, Loop, node_balance, add_loop_current
     LAWS.bend            # as 2 leis do Circuit
-    PROOF.bend            # prova (importa bend/tests/circuit_assoc.bend)
+    PROOF.bend            # prova (cola, importa proofs/circuit_assoc.bend)
+    proofs/
+      circuit_assoc.bend   # a prova de fato das 2 leis do Circuit (~30 lemas)
   ising/
     lattice.bend         # Spin, Lattice, Coupling, flip, magnetization
     LAWS.bend             # as 3 leis do Ising
     PROOF.bend             # prova, autocontida
   tests/
     sint_laws.bend        # associatividade/comutatividade geral de SInt.add
-    circuit_assoc.bend     # a prova de fato das 2 leis do Circuit (~30 lemas)
   main.bend             # roda os dois módulos, imprime o estado final
 
 lean/
@@ -44,6 +47,9 @@ lean/
 
 bench/
   run.sh               # script de benchmark versionado e reproduzível
+
+docs/
+  index.html           # relatório interativo, servido via GitHub Pages
 ```
 
 ## Rodando

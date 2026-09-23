@@ -1,7 +1,7 @@
 # Circuit -- the laws (Module A: the resistive circuit graph).
 
 import Base
-import ../circuit/circuit.bend as Circuit
+import ./circuit.bend as Circuit
 import ../int.bend as Int
 
 # Not namespaced "Circuit.is_circulation"/"Circuit.all_circulations" on

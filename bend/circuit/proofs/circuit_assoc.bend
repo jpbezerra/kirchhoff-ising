@@ -1,7 +1,7 @@
 import Base
-import ../circuit/circuit.bend as Circuit
-import ../int.bend as Int
-import ./sint_laws.bend as SL
+import ../circuit.bend as Circuit
+import ../../int.bend as Int
+import ../../tests/sint_laws.bend as SL
 
 # neg(from_diff(x,y)) == from_diff(y,x) -- negating a "ups - downs" value
 # swaps ups and downs. Base cases are all free computation (0-vs-anything

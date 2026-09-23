@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Benchmark script for PRD.md §8's comparison table.
+# Benchmark script for REPORT.md's comparison table.
 #
-# Measures, on this machine, in this session (PRD §8's "same hardware, same
+# Measures, on this machine, in this session (this project's "same hardware, same
 # session" principle):
 #   - checking time: `bend <PROOF>.bend` per module, `lake build Laws`
 #     (incremental -- Mathlib is already built; a from-scratch Mathlib
@@ -52,10 +52,10 @@ echo "### Bend (bend <PROOF>.bend -- both modules fully closed, 0 ?TODO)"
 time_cmd "ising/PROOF.bend"   bend bend/ising/PROOF.bend
 time_cmd "circuit/PROOF.bend" bend bend/circuit/PROOF.bend
 echo
-echo "### Bend (bend bend/tests/circuit_assoc.bend -- the associativity/"
+echo "### Bend (bend bend/circuit/proofs/circuit_assoc.bend -- the associativity/"
 echo "### counting lemma library circuit/PROOF.bend imports; checked here"
 echo "### separately since it dominates Circuit's real proof-checking cost)"
-time_cmd "tests/circuit_assoc.bend" bend bend/tests/circuit_assoc.bend
+time_cmd "circuit/proofs/circuit_assoc.bend" bend bend/circuit/proofs/circuit_assoc.bend
 
 echo
 echo "### Lean (lake build Laws, incremental -- Mathlib already built)"
@@ -80,7 +80,7 @@ echo
 
 count_bend_proof() {
   # All lines in a PROOF.bend file (comments included -- Bend's own
-  # convention treats the whole file as the proof, PRD §8 wants "proof-only
+  # convention treats the whole file as the proof; REPORT.md wants "proof-only
   # LOC (excluding types/functions)" but Bend's LAWS/PROOF split already
   # separates law statements (LAWS.bend, counted as "non-proof" here,
   # analogous to Lean's theorem signature) from proof terms (PROOF.bend).
@@ -94,7 +94,7 @@ printf "%-32s %10s %10s\n" "bend/ising/PROOF.bend"    "$(count_bend_proof bend/i
 printf "%-32s %10s %10s\n" "bend/circuit/circuit.bend" "$(wc -l < bend/circuit/circuit.bend)" "types/fns"
 printf "%-32s %10s %10s\n" "bend/circuit/LAWS.bend"   "$(wc -l < bend/circuit/LAWS.bend)"   "law statements"
 printf "%-32s %10s %10s\n" "bend/circuit/PROOF.bend"  "$(count_bend_proof bend/circuit/PROOF.bend)" "proof glue (imports circuit_assoc.bend)"
-printf "%-32s %10s %10s\n" "bend/tests/circuit_assoc.bend" "$(count_bend_proof bend/tests/circuit_assoc.bend)" "proof lemma library (5/5 laws closed)"
+printf "%-32s %10s %10s\n" "bend/circuit/proofs/circuit_assoc.bend" "$(count_bend_proof bend/circuit/proofs/circuit_assoc.bend)" "proof lemma library (5/5 laws closed)"
 printf "%-32s %10s %10s\n" "bend/tests/sint_laws.bend" "$(count_bend_proof bend/tests/sint_laws.bend)" "SInt.add assoc/comm (shared lemma library)"
 printf "%-32s %10s %10s\n" "bend/int.bend"            "$(wc -l < bend/int.bend)"            "types/fns (shared)"
 printf "%-32s %10s %10s\n" "lean/Ising.lean"          "$(wc -l < lean/Ising.lean)"          "types/fns"
@@ -102,7 +102,7 @@ printf "%-32s %10s %10s\n" "lean/Circuit.lean"        "$(wc -l < lean/Circuit.le
 printf "%-32s %10s %10s\n" "lean/Laws.lean"           "$(wc -l < lean/Laws.lean)"           "statements + proofs (interleaved, 5/5 laws closed)"
 
 echo
-echo "Note: Lean interleaves theorem statement and proof (PRD §7 -- no"
+echo "Note: Lean interleaves theorem statement and proof -- no"
 echo "LAWS/PROOF split), so lean/Laws.lean's total (151) mixes both; a"
 echo "proof-only sub-count would need per-theorem hand attribution, not a"
 echo "line-based heuristic. Reported as one honest total instead of a"
@@ -110,7 +110,7 @@ echo "precision this method can't actually deliver."
 echo
 echo "Note: Circuit's proof cost on the Bend side is split across three"
 echo "files it imports transitively -- circuit/PROOF.bend (glue, applies the"
-echo "lemmas to the LAW statements), tests/circuit_assoc.bend (the"
+echo "lemmas to the LAW statements), circuit/proofs/circuit_assoc.bend (the"
 echo "associativity/counting lemma library, ~40 lemmas), and"
 echo "tests/sint_laws.bend (general SInt.add associativity/commutativity,"
 echo "imported by circuit_assoc.bend only -- Ising's proof needs no general"
