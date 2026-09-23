@@ -1,4 +1,5 @@
 <title>Relatório Kirchhoff-Ising</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <style>
   :root {
     color-scheme: light;
@@ -233,20 +234,19 @@
   .gotcha p { font-size: 14.5px; color: var(--ink-2); margin: 6px 0 0; }
 
   /* ---------- next steps ---------- */
-  ol.steps { list-style: none; margin: 0; padding: 0; counter-reset: step; }
+  ol.steps { list-style: none; margin: 0; padding: 0; }
   ol.steps li {
-    counter-increment: step;
     display: grid; grid-template-columns: 28px 1fr; gap: 12px;
     padding: 12px 0; border-bottom: 1px solid var(--border);
     font-size: 14.5px;
   }
   ol.steps li:last-child { border-bottom: none; }
-  ol.steps li::before {
-    content: counter(step);
+  ol.steps .step-num {
     font-family: "IBM Plex Mono", monospace; font-size: 13px; color: var(--muted);
     width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--border-2);
     display: flex; align-items: center; justify-content: center;
   }
+  ol.steps .step-body { min-width: 0; }
   ol.steps b { color: var(--ink); }
 
   /* ---------- timeline (circuit narrative) ---------- */
@@ -446,7 +446,7 @@ def shift_invariant(+x: Nat, +y: Nat)
     </div>
   </div>
 
-  <p style="margin-top:8px;">O trabalho de verdade vive em dois arquivos independentemente checáveis: <code>bend/tests/sint_laws.bend</code> (308 linhas, associatividade geral) e <code>bend/tests/circuit_assoc.bend</code> (499 linhas, ~30 lemas — a ponte de contagem). <code>bend/circuit/PROOF.bend</code> (73 linhas) hoje é só a "cola" que aplica tudo isso às duas leis. Ver <code>REPORT.md</code> §4 no repositório para a derivação completa, caso a caso.</p>
+  <p style="margin-top:8px;">O trabalho de verdade vive em dois arquivos independentemente checáveis: <code>bend/tests/sint_laws.bend</code> (308 linhas, associatividade geral) e <code>bend/tests/circuit_assoc.bend</code> (499 linhas, ~30 lemas — a ponte de contagem). <code>bend/circuit/PROOF.bend</code> (73 linhas) hoje é só a "cola" que aplica tudo isso às duas leis. Ver <a href="https://github.com/jpbezerra/kirchhoff-ising/blob/main/REPORT.md">REPORT.md</a> §4 no repositório para a derivação completa, caso a caso.</p>
 </section>
 
 <section id="lean">
@@ -591,13 +591,13 @@ def shift_invariant(+x: Nat, +y: Nat)
 <section id="proximos">
   <h2>Próximos passos</h2>
   <ol class="steps">
-    <li><b>Paralelismo de CPU</b> (fase avançada, opcional) — medir speedup numa operação <code>sweep</code> sobre a grade Ising, usando a metodologia de bend2.dev/learn/measuring-speedup. Escopo novo, não uma continuação das provas já fechadas.</li>
-    <li><b>GPU</b> — fora de escopo nesta máquina (sem GPU disponível).</li>
-    <li><b>Lei <code>resume</code></b> (fase avançada, opcional) — rodar a simulação em lotes é equivalente a rodar tudo de uma vez, nos dois módulos.</li>
-    <li><b>Consolidação cosmética (opcional)</b> — <code>bend/tests/circuit_assoc.bend</code> hoje vive num arquivo de "teste" por escolha deliberada (mantém cada lema independentemente checável durante o desenvolvimento); poderia mover para <code>bend/circuit/proofs/</code> sem mudar nenhum conteúdo matemático.</li>
+    <li><div class="step-num">1</div><div class="step-body"><b>Paralelismo de CPU</b> (fase avançada, opcional) — medir speedup numa operação <code>sweep</code> sobre a grade Ising, usando a metodologia de bend2.dev/learn/measuring-speedup. Escopo novo, não uma continuação das provas já fechadas.</div></li>
+    <li><div class="step-num">2</div><div class="step-body"><b>GPU</b> — fora de escopo nesta máquina (sem GPU disponível).</div></li>
+    <li><div class="step-num">3</div><div class="step-body"><b>Lei <code>resume</code></b> (fase avançada, opcional) — rodar a simulação em lotes é equivalente a rodar tudo de uma vez, nos dois módulos.</div></li>
+    <li><div class="step-num">4</div><div class="step-body"><b>Consolidação cosmética (opcional)</b> — <code>bend/tests/circuit_assoc.bend</code> hoje vive num arquivo de "teste" por escolha deliberada (mantém cada lema independentemente checável durante o desenvolvimento); poderia mover para <code>bend/circuit/proofs/</code> sem mudar nenhum conteúdo matemático.</div></li>
   </ol>
 </section>
 
-<footer>Relatório gerado a partir de <code>bend/</code>, <code>lean/</code> e <code>bench/run.sh</code> deste repositório. Ver <code>REPORT.md</code> para a versão completa em texto, com a derivação matemática caso a caso.</footer>
+<footer>Relatório gerado a partir de <code>bend/</code>, <code>lean/</code> e <code>bench/run.sh</code> deste repositório. Ver <a href="https://github.com/jpbezerra/kirchhoff-ising/blob/main/REPORT.md">REPORT.md</a> para a versão completa em texto, com a derivação matemática caso a caso.</footer>
 
 </div>
