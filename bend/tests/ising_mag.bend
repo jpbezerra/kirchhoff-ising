@@ -1,235 +1,22 @@
-# Ising -- the proofs. All three laws are fully proven.
-#
-# flip_twice_identity and preserves_lattice_shape are structural inductions
-# mirroring flip.row/flip.rows. magnetization uses a direct (ups, downs)
-# count (see lattice.bend) so flip_changes_magnetization needs a handful of
-# small Nat/SInt arithmetic lemmas, plus the Nat.add facts they turned out
-# to need transitively (Bend has no `omega`/`ring`, so even Nat.add
-# commutativity has to be proven by hand once, then reused).
+# Scratch/exploratory proof of flip_changes_magnetization_by_two, built up
+# incrementally against the real compiler before being merged into
+# bend/ising/PROOF.bend (the real, in-use copy). Kept as a standalone,
+# independently checkable record -- also documents the "forward reference
+# breaks a Type-valued def" gotcha found while building this (see
+# row_pair_rel.true_cons's position relative to lift_up below). Run with
+# `bend bend/tests/ising_mag.bend`.
 
 import Base
-import ./lattice.bend as Ising
+import ../ising/lattice.bend as Ising
 import ../int.bend as Int
-import ./LAWS.bend as Laws
 
-# flip_twice_identity
-# --------------------
-
-def bool_not_not(u: Bool) -> {u == Bool.not(Bool.not(u)) : Bool}:
-  match u:
-    case True{}:
-      {==}
-    case False{}:
-      {==}
-
-# %rewrite on a self-recursive call needs its type already concrete, so the
-# recursive step is a helper taking `rec` as a plain parameter (mirrors
-# proof_insertion_sort's sorted_ins/.fin split), not an inline %rec(...).
-#
-# The head must be bound as `Ising.Spin{u} <> t`, not a bare `h <> t`: Bend's
-# matcher won't reduce `flip.row(h <> t, 1n+p)` for an opaque `h : Spin` --
-# even though Spin has a single constructor, the checker needs a literal
-# constructor application at that position, not just the type's shape, to
-# tell flip.row's `Spin{u} <> t, 0n` arm apart from its `h <> t, 1n+p` one.
-
-def flip_row_twice.cons(u: Bool, +t: +List<Ising.Spin>, +p: Nat,
-  rec: {t == Ising.flip.row(Ising.flip.row(t, p), p) : +List<Ising.Spin>})
-  -> {Ising.Spin{u} <> t == Ising.flip.row(Ising.flip.row(Ising.Spin{u} <> t, 1n+p), 1n+p) : +List<Ising.Spin>}:
-  %rec : {Ising.Spin{u} <> t == Ising.Spin{u} <> _ : +List<Ising.Spin>}
-  {==}
-
-def flip_row_twice(+row: +List<Ising.Spin>, +j: Nat) -> {row == Ising.flip.row(Ising.flip.row(row, j), j) : +List<Ising.Spin>}:
-  match row j:
-    case Nil{} _:
-      {==}
-    case Ising.Spin{u} <> t 0n:
-      %bool_not_not(u) : {Ising.Spin{u} <> t == Ising.Spin{_} <> t : +List<Ising.Spin>}
-      {==}
-    case Ising.Spin{u} <> t 1n+p:
-      flip_row_twice.cons(u, t, p, flip_row_twice(t, p))
-
-def flip_rows_twice.zero(row: +List<Ising.Spin>, +j: Nat, +t: +List<+List<Ising.Spin>>,
-  rec: {row == Ising.flip.row(Ising.flip.row(row, j), j) : +List<Ising.Spin>})
-  -> {row <> t == Ising.flip.rows(Ising.flip.rows(row <> t, 0n, j), 0n, j) : +List<+List<Ising.Spin>>}:
-  %rec : {row <> t == _ <> t : +List<+List<Ising.Spin>>}
-  {==}
-
-def flip_rows_twice.succ(row: +List<Ising.Spin>, +t: +List<+List<Ising.Spin>>, +p: Nat, +j: Nat,
-  rec: {t == Ising.flip.rows(Ising.flip.rows(t, p, j), p, j) : +List<+List<Ising.Spin>>})
-  -> {row <> t == Ising.flip.rows(Ising.flip.rows(row <> t, 1n+p, j), 1n+p, j) : +List<+List<Ising.Spin>>}:
-  %rec : {row <> t == row <> _ : +List<+List<Ising.Spin>>}
-  {==}
-
-def flip_rows_twice(+rows: +List<+List<Ising.Spin>>, +i: Nat, +j: Nat) -> {rows == Ising.flip.rows(Ising.flip.rows(rows, i, j), i, j) : +List<+List<Ising.Spin>>}:
-  match rows i:
-    case Nil{} _:
-      {==}
-    case row <> t 0n:
-      flip_rows_twice.zero(row, j, t, flip_row_twice(row, j))
-    case row <> t 1n+p:
-      flip_rows_twice.succ(row, t, p, j, flip_rows_twice(t, p, j))
-
-def Laws.flip_twice_identity(lat, i, j):
-  match lat:
-    case Ising.Lattice{rows}:
-      %flip_rows_twice(rows, i, j) : {Ising.Lattice{_} == Ising.Lattice{rows} : Ising.Lattice}
-      {==}
-
-# preserves_lattice_shape
-# ------------------------
-# flip.rows only ever replaces one row with flip.row(that row, j), which
-# doesn't change the outer row count -- no need to touch flip.row at all.
-
-def rows_len.succ(row: +List<Ising.Spin>, +t: +List<+List<Ising.Spin>>, +p: Nat, +j: Nat,
-  rec: {List.length(&2, +List<Ising.Spin>, t) == List.length(&2, +List<Ising.Spin>, Ising.flip.rows(t, p, j)) : Nat})
-  -> {List.length(&2, +List<Ising.Spin>, row <> t) == List.length(&2, +List<Ising.Spin>, Ising.flip.rows(row <> t, 1n+p, j)) : Nat}:
-  %rec : {1n+List.length(&2, +List<Ising.Spin>, t) == 1n+_ : Nat}
-  {==}
-
-def rows_len(+rows: +List<+List<Ising.Spin>>, +i: Nat, +j: Nat)
-  -> {List.length(&2, +List<Ising.Spin>, rows) == List.length(&2, +List<Ising.Spin>, Ising.flip.rows(rows, i, j)) : Nat}:
-  match rows i:
-    case Nil{} _:
-      {==}
-    case row <> t 0n:
-      {==}
-    case row <> t 1n+p:
-      rows_len.succ(row, t, p, j, rows_len(t, p, j))
-
-def Laws.preserves_lattice_shape(lat, i, j):
-  match lat:
-    case Ising.Lattice{rows}:
-      %rows_len(rows, i, j) : {_ == List.length(&2, +List<Ising.Spin>, rows) : Nat}
-      {==}
-
-# flip_changes_magnetization_by_two
-# -----------------------------------
-# Nat.add facts (Bend has no `omega`; these are proven once, by hand, the
-# same way GUIDE.md's add_zero example is).
-
-def nat_add_zero_r.succ(+p: Nat, rec: {Nat.add(p, 0n) == p : Nat}) -> {Nat.add(1n+p, 0n) == 1n+p : Nat}:
-  %rec : {1n+Nat.add(p, 0n) == 1n+_ : Nat}
-  {==}
-
-def nat_add_zero_r(+n: Nat) -> {Nat.add(n, 0n) == n : Nat}:
-  match n:
-    case 0n:
-      {==}
-    case 1n+p:
-      nat_add_zero_r.succ(p, nat_add_zero_r(p))
-
-def nat_add_succ_r.succ(+p: Nat, +m: Nat, rec: {Nat.add(p, 1n+m) == 1n+Nat.add(p, m) : Nat}) -> {Nat.add(1n+p, 1n+m) == 1n+Nat.add(1n+p, m) : Nat}:
-  %rec : {1n+Nat.add(p, 1n+m) == 1n+_ : Nat}
-  {==}
-
-def nat_add_succ_r(+n: Nat, +m: Nat) -> {Nat.add(n, 1n+m) == 1n+Nat.add(n, m) : Nat}:
-  match n:
-    case 0n:
-      {==}
-    case 1n+p:
-      nat_add_succ_r.succ(p, m, nat_add_succ_r(p, m))
-
-def nat_add_comm.zero(+m: Nat) -> {Nat.add(0n, m) == Nat.add(m, 0n) : Nat}:
-  %nat_add_zero_r(m) : {_ == Nat.add(m, 0n) : Nat}
-  {==}
-
-def nat_add_comm.succ(+p: Nat, +m: Nat, rec: {Nat.add(p, m) == Nat.add(m, p) : Nat}) -> {Nat.add(1n+p, m) == Nat.add(m, 1n+p) : Nat}:
-  %Equal.sym(Nat, Nat.add(m, 1n+p), 1n+Nat.add(m, p), nat_add_succ_r(m, p)) : {1n+Nat.add(p, m) == _ : Nat}
-  %rec : {1n+Nat.add(p, m) == 1n+_ : Nat}
-  {==}
-
-def nat_add_comm(+n: Nat, +m: Nat) -> {Nat.add(n, m) == Nat.add(m, n) : Nat}:
-  match n:
-    case 0n:
-      nat_add_comm.zero(m)
-    case 1n+p:
-      nat_add_comm.succ(p, m, nat_add_comm(p, m))
-
-def nat_add_one_r(+n: Nat) -> {Nat.add(n, 1n) == 1n+n : Nat}:
-  %nat_add_comm(n, 1n) : {Nat.add(n, 1n) == _ : Nat}
-  {==}
-
-# SInt.from_diff step lemmas.
-#
-# Needed: for all a, b: Nat, {from_diff(1n+a, b) == add(from_diff(a, 1n+b),
-# SInt{True, 2n})} (moving one spin from "down" to "up" raises the
-# magnetization by exactly 2), and the mirror diff_dec. SInt.from_diff.cmp
-# pattern-matches on Nat.cmp(ups, downs), so it's stuck until that
-# comparison resolves to a concrete LT/EQ/GT.
-#
-# The key unlock: from_diff(1n+x, 1n+y) == from_diff(x, y) is NOT free by
-# direct computation (from_diff.cmp carries the *unpeeled* ups/downs through
-# to its magnitude branches, only the cmp argument peels on its own) -- but
-# it IS provable by routing through a helper parameterized by the *already
-# computed* Cmp value (from_diff_cmp_shift below), since `match` can bind a
-# Cmp parameter and case on it even though it can't scrutinize the computed
-# expression `Nat.cmp(x, y)` directly. Once cmp is a plain parameter, all
-# three of its cases (LT/EQ/GT) close by pure computation: Nat.sub also
-# peels a matching 1n+/1n+ pair for free. This is what "shift_invariant"
-# below gives for real (an earlier attempt assumed it was free without this
-# indirection and was wrong -- confirmed against the compiler before this
-# fix was found).
-def from_diff_cmp_shift(c: Cmp, +x: Nat, +y: Nat) -> {Int.SInt.from_diff.cmp(c, 1n+x, 1n+y) == Int.SInt.from_diff.cmp(c, x, y) : Int.SInt}:
-  match c:
-    case LT{}:
-      {==}
-    case EQ{}:
-      {==}
-    case GT{}:
-      {==}
-
-def shift_invariant(+x: Nat, +y: Nat) -> {Int.SInt.from_diff(1n+x, 1n+y) == Int.SInt.from_diff(x, y) : Int.SInt}:
-  from_diff_cmp_shift(Nat.cmp(x, y), x, y)
-
-def diff_inc(+a: Nat, +b: Nat) -> {Int.SInt.from_diff(1n+a, b) == Int.SInt.add(Int.SInt.from_diff(a, 1n+b), Int.SInt{True{}, 2n}) : Int.SInt}:
-  match a b:
-    case 0n 0n:
-      {==}
-    case 0n 1n:
-      {==}
-    case 0n 2n+bpp:
-      {==}
-    case 1n 0n:
-      {==}
-    case 2n+app 0n:
-      %nat_add_comm(2n, app) : {Int.SInt{True{}, 3n+app} == Int.SInt{True{}, 1n+_} : Int.SInt}
-      {==}
-    case 1n+ap 1n+bp:
-      %Equal.sym(Int.SInt, Int.SInt.from_diff(1n+(1n+ap), 1n+bp), Int.SInt.from_diff(1n+ap, bp), shift_invariant(1n+ap, bp))
-        : {_ == Int.SInt.add(Int.SInt.from_diff(1n+ap, 1n+(1n+bp)), Int.SInt{True{}, 2n}) : Int.SInt}
-      %Equal.sym(Int.SInt, Int.SInt.from_diff(1n+ap, 1n+(1n+bp)), Int.SInt.from_diff(ap, 1n+bp), shift_invariant(ap, 1n+bp))
-        : {Int.SInt.from_diff(1n+ap, bp) == Int.SInt.add(_, Int.SInt{True{}, 2n}) : Int.SInt}
-      diff_inc(ap, bp)
-
-# diff_dec: moving one spin from "up" to "down" lowers the magnetization by
-# exactly 2 -- mirror of diff_inc.
-def diff_dec(+a: Nat, +b: Nat) -> {Int.SInt.from_diff(a, 1n+b) == Int.SInt.add(Int.SInt.from_diff(1n+a, b), Int.SInt{False{}, 2n}) : Int.SInt}:
-  match a b:
-    case 0n 0n:
-      {==}
-    case 0n 1n+bp:
-      match bp:
-        case 0n:
-          {==}
-        case 1n+bpp:
-          %nat_add_comm(2n, bpp) : {Int.SInt{False{}, 3n+bpp} == Int.SInt{False{}, 1n+_} : Int.SInt}
-          {==}
-    case 1n 0n:
-      {==}
-    case 2n+app 0n:
-      {==}
-    case 1n+ap 1n+bp:
-      %Equal.sym(Int.SInt, Int.SInt.from_diff(1n+ap, 1n+(1n+bp)), Int.SInt.from_diff(ap, 1n+bp), shift_invariant(ap, 1n+bp))
-        : {_ == Int.SInt.add(Int.SInt.from_diff(1n+(1n+ap), 1n+bp), Int.SInt{False{}, 2n}) : Int.SInt}
-      %Equal.sym(Int.SInt, Int.SInt.from_diff(1n+(1n+ap), 1n+bp), Int.SInt.from_diff(1n+ap, bp), shift_invariant(1n+ap, bp))
-        : {Int.SInt.from_diff(ap, 1n+bp) == Int.SInt.add(_, Int.SInt{False{}, 2n}) : Int.SInt}
-      diff_dec(ap, bp)
-
-# The (ups,downs) Count relation across a single flip -- either unchanged,
-# or a single spin moved in one direction. Phrased via equality-to-a-
-# reconstructed-Count (never destructuring the Counts themselves) because
-# updown.row(t) for an abstract list t never reduces to a literal Count --
-# any destructure of it (match or let-pair) gets stuck.
+# Relation between an (ups,downs) Count before/after a single flip inside a
+# row/lattice: either unchanged, or there's a shared "core" Count such that
+# before = bump_up(core), after = bump_down(core) (one spin went up->down),
+# or the symmetric case. Phrased via equality-to-a-reconstructed-Count
+# (never destructuring p1/p2 themselves) because updown.row(t) for an
+# abstract list t never reduces to a literal Count -- any destructure of it
+# (match or let-pair) gets stuck.
 def count_rel(p1: Ising.Count, p2: Ising.Count) -> Type:
   Or(
     {p1 == p2 : Ising.Count},
@@ -311,9 +98,9 @@ def row_pair_rel(+row: +List<Ising.Spin>, +j: Nat) -> count_rel(Ising.updown.row
     case Ising.Spin{False{}} <> t 1n+p:
       row_pair_rel.false_cons(t, p, row_pair_rel(t, p))
 
-# combine's own first-argument recursion (like Nat.add's) means shifting the
-# FIRST Count by a bump distributes for free; shifting the SECOND needs
-# nat_add_succ_r since the shift lands on Nat.add's non-recursive argument.
+def main() -> Nat:
+  0n
+
 def combine_bump_up_left(+core: Ising.Count, +R: Ising.Count) -> {Ising.updown.combine(Ising.updown.bump_up(core), R) == Ising.updown.bump_up(Ising.updown.combine(core, R)) : Ising.Count}:
   match core R:
     case Ising.Count{cu, cd} Ising.Count{ru, rd}:
@@ -351,6 +138,30 @@ def combine_cong_left(+R: Ising.Count, +P: Ising.Count, +Q: Ising.Count, rec: co
           Equal.cong(Ising.Count, Ising.Count, p => Ising.updown.combine(p, R), Q, Ising.updown.bump_up(core), e2),
           combine_bump_up_left(core, R))
       ))}}
+
+# Nat.add facts (already proven this way in ising/PROOF.bend; duplicated
+# here for this standalone scratch file).
+def nat_add_zero_r.succ(+p: Nat, rec: {Nat.add(p, 0n) == p : Nat}) -> {Nat.add(1n+p, 0n) == 1n+p : Nat}:
+  %rec : {1n+Nat.add(p, 0n) == 1n+_ : Nat}
+  {==}
+
+def nat_add_zero_r(+n: Nat) -> {Nat.add(n, 0n) == n : Nat}:
+  match n:
+    case 0n:
+      {==}
+    case 1n+p:
+      nat_add_zero_r.succ(p, nat_add_zero_r(p))
+
+def nat_add_succ_r.succ(+p: Nat, +m: Nat, rec: {Nat.add(p, 1n+m) == 1n+Nat.add(p, m) : Nat}) -> {Nat.add(1n+p, 1n+m) == 1n+Nat.add(1n+p, m) : Nat}:
+  %rec : {1n+Nat.add(p, 1n+m) == 1n+_ : Nat}
+  {==}
+
+def nat_add_succ_r(+n: Nat, +m: Nat) -> {Nat.add(n, 1n+m) == 1n+Nat.add(n, m) : Nat}:
+  match n:
+    case 0n:
+      {==}
+    case 1n+p:
+      nat_add_succ_r.succ(p, m, nat_add_succ_r(p, m))
 
 def combine_bump_up_right(+core: Ising.Count, +R: Ising.Count) -> {Ising.updown.combine(R, Ising.updown.bump_up(core)) == Ising.updown.bump_up(Ising.updown.combine(R, core)) : Ising.Count}:
   match core R:
@@ -408,6 +219,84 @@ def rows_pair_rel(+rows: +List<+List<Ising.Spin>>, +i: Nat, +j: Nat) -> count_re
       rows_pair_rel.zero(row, j, t, row_pair_rel(row, j))
     case row <> t 1n+p:
       rows_pair_rel.succ(row, t, p, j, rows_pair_rel(t, p, j))
+
+# SInt.from_diff facts (mirrors sint_laws.bend, duplicated here for this
+# standalone scratch file -- see sint_laws.bend for the full derivation
+# notes on shift_invariant/diff_inc/diff_dec).
+
+def from_diff_cmp_shift(c: Cmp, +x: Nat, +y: Nat) -> {Int.SInt.from_diff.cmp(c, 1n+x, 1n+y) == Int.SInt.from_diff.cmp(c, x, y) : Int.SInt}:
+  match c:
+    case LT{}:
+      {==}
+    case EQ{}:
+      {==}
+    case GT{}:
+      {==}
+
+def shift_invariant(+x: Nat, +y: Nat) -> {Int.SInt.from_diff(1n+x, 1n+y) == Int.SInt.from_diff(x, y) : Int.SInt}:
+  from_diff_cmp_shift(Nat.cmp(x, y), x, y)
+
+def nat_add_comm.zero(+m: Nat) -> {Nat.add(0n, m) == Nat.add(m, 0n) : Nat}:
+  %nat_add_zero_r(m) : {_ == Nat.add(m, 0n) : Nat}
+  {==}
+
+def nat_add_comm.succ(+p: Nat, +m: Nat, rec: {Nat.add(p, m) == Nat.add(m, p) : Nat}) -> {Nat.add(1n+p, m) == Nat.add(m, 1n+p) : Nat}:
+  %Equal.sym(Nat, Nat.add(m, 1n+p), 1n+Nat.add(m, p), nat_add_succ_r(m, p)) : {1n+Nat.add(p, m) == _ : Nat}
+  %rec : {1n+Nat.add(p, m) == 1n+_ : Nat}
+  {==}
+
+def nat_add_comm(+n: Nat, +m: Nat) -> {Nat.add(n, m) == Nat.add(m, n) : Nat}:
+  match n:
+    case 0n:
+      nat_add_comm.zero(m)
+    case 1n+p:
+      nat_add_comm.succ(p, m, nat_add_comm(p, m))
+
+def nat_add_one_r(+n: Nat) -> {Nat.add(n, 1n) == 1n+n : Nat}:
+  %nat_add_comm(n, 1n) : {Nat.add(n, 1n) == _ : Nat}
+  {==}
+
+def diff_inc(+a: Nat, +b: Nat) -> {Int.SInt.from_diff(1n+a, b) == Int.SInt.add(Int.SInt.from_diff(a, 1n+b), Int.SInt{True{}, 2n}) : Int.SInt}:
+  match a b:
+    case 0n 0n:
+      {==}
+    case 0n 1n:
+      {==}
+    case 0n 2n+bpp:
+      {==}
+    case 1n 0n:
+      {==}
+    case 2n+app 0n:
+      %nat_add_comm(2n, app) : {Int.SInt{True{}, 3n+app} == Int.SInt{True{}, 1n+_} : Int.SInt}
+      {==}
+    case 1n+ap 1n+bp:
+      %Equal.sym(Int.SInt, Int.SInt.from_diff(1n+(1n+ap), 1n+bp), Int.SInt.from_diff(1n+ap, bp), shift_invariant(1n+ap, bp))
+        : {_ == Int.SInt.add(Int.SInt.from_diff(1n+ap, 1n+(1n+bp)), Int.SInt{True{}, 2n}) : Int.SInt}
+      %Equal.sym(Int.SInt, Int.SInt.from_diff(1n+ap, 1n+(1n+bp)), Int.SInt.from_diff(ap, 1n+bp), shift_invariant(ap, 1n+bp))
+        : {Int.SInt.from_diff(1n+ap, bp) == Int.SInt.add(_, Int.SInt{True{}, 2n}) : Int.SInt}
+      diff_inc(ap, bp)
+
+def diff_dec(+a: Nat, +b: Nat) -> {Int.SInt.from_diff(a, 1n+b) == Int.SInt.add(Int.SInt.from_diff(1n+a, b), Int.SInt{False{}, 2n}) : Int.SInt}:
+  match a b:
+    case 0n 0n:
+      {==}
+    case 0n 1n+bp:
+      match bp:
+        case 0n:
+          {==}
+        case 1n+bpp:
+          %nat_add_comm(2n, bpp) : {Int.SInt{False{}, 3n+bpp} == Int.SInt{False{}, 1n+_} : Int.SInt}
+          {==}
+    case 1n 0n:
+      {==}
+    case 2n+app 0n:
+      {==}
+    case 1n+ap 1n+bp:
+      %Equal.sym(Int.SInt, Int.SInt.from_diff(1n+ap, 1n+(1n+bp)), Int.SInt.from_diff(ap, 1n+bp), shift_invariant(ap, 1n+bp))
+        : {_ == Int.SInt.add(Int.SInt.from_diff(1n+(1n+ap), 1n+bp), Int.SInt{False{}, 2n}) : Int.SInt}
+      %Equal.sym(Int.SInt, Int.SInt.from_diff(1n+(1n+ap), 1n+bp), Int.SInt.from_diff(1n+ap, bp), shift_invariant(1n+ap, bp))
+        : {Int.SInt.from_diff(ap, 1n+bp) == Int.SInt.add(_, Int.SInt{False{}, 2n}) : Int.SInt}
+      diff_dec(ap, bp)
 
 # Final conversion: count_rel at the Count level implies the 3-way SInt
 # disjunction, via diff_inc/diff_dec applied once at the leaf.
@@ -468,7 +357,14 @@ def mag_law.finish(+C1: Ising.Count, +C2: Ising.Count, rec: count_rel(C1, C2)) -
       (e1, e2) = ew
       Inr{Inl{mag_inc_case_core(core, C1, C2, e1, e2)}}
 
-def Laws.flip_changes_magnetization_by_two(lat, i, j):
+def mag_law(+lat: Ising.Lattice, +i: Nat, +j: Nat) ->
+  Or(
+    {Ising.magnetization(Ising.flip(lat, i, j)) == Ising.magnetization(lat) : Int.SInt},
+    Or(
+      {Ising.magnetization(Ising.flip(lat, i, j)) == Int.SInt.add(Ising.magnetization(lat), Int.SInt.of_nat(2n)) : Int.SInt},
+      {Ising.magnetization(Ising.flip(lat, i, j)) == Int.SInt.add(Ising.magnetization(lat), Int.SInt.neg(Int.SInt.of_nat(2n))) : Int.SInt}
+    )
+  ):
   match lat:
     case Ising.Lattice{rows}:
       mag_law.finish(Ising.updown.rows(rows), Ising.updown.rows(Ising.flip.rows(rows, i, j)), rows_pair_rel(rows, i, j))

@@ -40,6 +40,8 @@ Os domínios escolhidos — circuito elétrico e rede de spins — partem do mes
 | 4 | Relatório comparativo preenchido com números reais (linhas de código de prova, tempo de checagem, tempo de execução) para os dois lados | Tabela do §8 populada |
 | 5 | Repositório público com instruções de build para as duas linguagens | README testado do zero |
 
+**Status em 2026-09-22**: critérios 1, 3 e 5 atendidos. Critério 4 atendido (§8 preenchido). Critério 2 **parcialmente** atendido: 8 das 10 leis (todas as 5 do lado Lean, 3 das 5 do lado Bend) têm prova completa sem `?TODO`/`sorry`; as 2 restantes (`preserves_node_balance` e `loop_current_conserves_total`, ambas em Bend) ficam como `?TODO` documentado em `bend/circuit/PROOF.bend`, com a causa raiz (associatividade geral de `SInt.add`) diagnosticada e parcialmente provada em `bend/tests/sint_laws.bend`. Ver HANDOFF.md para o estado exato e o próximo passo.
+
 ### Não-objetivos explícitos
 
 - Não é objetivo publicar um paper ou reivindicar superioridade definitiva de uma linguagem sobre a outra — o objetivo é dados comparáveis, não um veredito.
@@ -124,7 +126,7 @@ Ambos os módulos evitam deliberadamente ponto flutuante — `Nat`/`Int` bastam 
 | `preserves_lattice_shape` | B | `flip` não muda as dimensões da grade |
 | `resume` (fase avançada) | A e B | Rodar a simulação em lotes é equivalente a rodar tudo de uma vez — mesma lei do exemplo da galáxia, agora testada em dois domínios diferentes |
 
-Diferente do projeto anterior, as leis aqui não seguem um único molde: o Módulo A prova uma invariante local por indução sobre uma **lista de arestas de tamanho variável** (não uma árvore binária), e o Módulo B prova **limites de variação** (uma diferença igual a 2, não uma soma preservada) sobre a atualização de uma célula numa grade. Isso testa duas técnicas de prova genuinamente distintas nas duas linguagens, em ve� de repetir o padrão do exemplo da galáxia duas vezes com nomes diferentes.
+Diferente do projeto anterior, as leis aqui não seguem um único molde: o Módulo A prova uma invariante local por indução sobre uma **lista de arestas de tamanho variável** (não uma árvore binária), e o Módulo B prova **limites de variação** (uma diferença igual a 2, não uma soma preservada) sobre a atualização de uma célula numa grade. Isso testa duas técnicas de prova genuinamente distintas nas duas linguagens, em ve� de repetir o padrão do exemplo da galáxia duas vezes com nomes diferentes.
 
 ## 6. Plano de implementação em Bend2
 
@@ -191,25 +193,38 @@ lean/
 
 ## 8. Metodologia de comparação
 
-Tabela a preencher durante a execução do projeto — mesma estrutura usada pela própria bend2.dev para comparar Bend2 com outras linguagens.
+Tabela preenchida em 2026-09-23, com as 5 leis fechadas dos dois lados
+(0 `?TODO`, 0 `sorry`), números reais medidos via `bash bench/run.sh`
+(script versionado, reproduzível — ver `bench/run.sh` e `bench/last_run.log`
+para o output bruto desta rodada). Máquina/sessão únicas, conforme os
+princípios abaixo. Ver [REPORT.md](REPORT.md) para a narrativa completa de
+como cada prova foi construída (em especial §4, a ponte de contagem que
+fechou o módulo Circuit).
 
 | Eixo | Como medir | Bend2 | Lean 4 |
 | --- | --- | --- | --- |
-| Esforço de prova | Linhas de código só de prova (excluindo tipos/funções) por lei | *(a preencher)* | *(a preencher)* |
-| Automação vs. manual | % de provas fechadas só com tática automática (Lean) vs. termo explícito (ambos) | N/A (sem táticas) | *(a preencher)* |
-| Tempo de checagem | Tempo de `bend PROOF.bend` / `lake build` no mesmo hardware | *(a preencher)* | *(a preencher)* |
-| Tempo de execução | Tempo para rodar N passos da simulação, 1 thread | *(a preencher)* | *(a preencher)* |
-| Paralelismo CPU | Speedup medido com múltiplos núcleos (metodologia bend2.dev/learn/measuring-speedup) | *(a preencher)* | N/A ou via `Task`, se implementado |
+| Esforço de prova (LOC) | Linhas de arquivo de prova por módulo (Bend: `PROOF.bend` + as bibliotecas de lemas que importa; Lean: `Laws.lean`, que mistura enunciado+prova — ver nota) | Ising `PROOF.bend`: 474 LOC (3/3 leis). Circuit: `PROOF.bend` (73, cola) + `tests/circuit_assoc.bend` (499, lemas de associatividade/contagem) + `tests/sint_laws.bend` (308, associatividade geral de `SInt.add`) = 880 LOC (2/2 leis). Total: 1354 LOC | `Laws.lean`: 151 LOC para as 5 leis dos dois módulos, enunciado e prova juntos (sem separação LAWS/PROOF do lado Lean) |
+| Automação vs. manual | % de provas fechadas só com tática automática (Lean) vs. termo explícito (ambos) | N/A (sem táticas) — 100% termo explícito em todas as provas, incluindo os lemas auxiliares de aritmética de `Nat`/`SInt` que Lean obteria de graça via `omega`/`ring` | 5/5 leis (100%) fechadas só com táticas (`induction`, `simp`, `omega`, `ring`, `split_ifs` etc.) — nenhuma prova precisou de termo explícito à mão. As duas mini-lemas auxiliares (`nodeBalanceDelta_nil/_cons`) fecham por `rfl` |
+| Tempo de checagem | Tempo de `bend PROOF.bend` / `lake build` no mesmo hardware, 3 execuções | Ising: 4.55s / 2.26s / 2.44s. Circuit (cola): 3.28s / 1.61s / 2.29s. Circuit (lemas, `tests/circuit_assoc.bend`): 2.05s / 2.34s / 1.70s | `lake build Laws` (incremental, Mathlib já compilado): 413.40s / 30.90s / 20.88s — primeira execução paga recompilação de dependências no cache do Lake; a terceira (20.88s) é o número comparável a "checar uma mudança pontual" |
+| Tempo de execução | `bend main.bend` (roda os dois módulos), 3 execuções | 2.79s / 2.07s / 1.58s | Não medido separadamente — o `Tests.lean` do projeto só tem `#eval`, que roda como efeito colateral do type-check/build (não há um binário compilado separado para cronometrar); ver `bench/run.sh` para a justificativa completa |
+| Paralelismo CPU | Speedup medido com múltiplos núcleos (metodologia bend2.dev/learn/measuring-speedup) | Não implementado nesta sessão (fase avançada, PRD §9 Fase 4) | N/A ou via `Task`, se implementado |
 | GPU | Speedup com `!`/Metal-CUDA vs. CPU | *N/A (sem GPU disponível, ver §10)* | N/A |
-| Linhas de código (não-prova) | LOC dos tipos e funções puras | *(a preencher)* | *(a preencher)* |
-| Curva de aprendizado | Tempo real gasto por quem implementa, em horas, por fase | *(a preencher)* | *(a preencher)* |
+| Linhas de código (não-prova) | LOC dos tipos e funções puras | `ising/lattice.bend`: 93. `circuit/circuit.bend`: 152. `int.bend` (compartilhado): 52. Total: 297 | `Ising.lean`: 34. `Circuit.lean`: 41. Total: 75 |
+| Curva de aprendizado | Tempo real gasto por quem implementa, em horas, por fase | Não cronometrado por fase (implementador único, sem baseline comparativo). Qualitativamente: a maior parte do tempo do lado Bend foi gasta reconstruindo, termo a termo, uma mini-biblioteca de aritmética de inteiros (associatividade, e um argumento de contagem para a ponte "circulação com +1 implica circulação com delta arbitrário") — não em entender a matemática das leis em si. Ver REPORT.md §4 e §7 (gotchas) | Não cronometrado por fase. Qualitativamente: o tempo do lado Lean foi dominado por iteração de táticas (`simp`/`omega` não fecham de primeira em boa parte das tentativas) e duas colisões de nome/design com o Mathlib (REPORT.md §5), não por design de tipos ou pela matemática |
+
+### Leitura dos números (honesta, não um veredito)
+
+- **Esforço de prova**: Bend precisou de ~9x mais LOC de prova que Lean para o mesmo conjunto de 5 leis, todas fechadas (1354 vs. 151) — e isso já é o custo final, não uma subestimativa. O número de Lean já inclui os enunciados das leis (que no lado Bend ficam em `LAWS.bend`, 33+57=90 LOC, fora dessa contagem), e mesmo assim Lean fica menor. A maior parte do custo extra do Bend (880 das 1354 linhas) é o módulo Circuit — reconstruir do zero associatividade de inteiros e um argumento de contagem que `omega`/`ring` do Lean resolvem em uma linha.
+- **Automação**: confirma a hipótese do PRD §6/§10 — Lean fecha 100% das leis só com táticas, sem precisar de um termo manual em nenhum caso, enquanto Bend não tem essa opção por design. Esse é o eixo onde a assimetria estrutural (Mathlib/tactics vs. ownership/paralelismo) mais aparece nos números.
+- **Tempo de checagem**: Bend é dramaticamente mais rápido por execução (~2-5s vs. dezenas de segundos mesmo incremental), mas essa comparação é injusta na direção oposta — o binário do Bend não carrega uma biblioteca do tamanho do Mathlib. Não é uma medida de "qual checker é mais eficiente", é uma medida de "qual dependência cada checagem paga".
+- **Linhas não-prova**: bend precisou de ~4x mais LOC de tipos/funções (297 vs. 75), em grande parte porque `int.bend` (52 LOC) reimplementa um tipo inteiro assinado que Lean ganha de graça do core/Mathlib, e porque Bend não tem `List.filter`/`List.sum` no nível de conveniência de Lean, exigindo mais funções auxiliares escritas à mão (`node_balance.go`, `loop_pairs`, `touch_to.go`/`touch_from.go`, etc.).
 
 ### Princípios da comparação
 
-- **Mesmo hardware, mesma máquina, mesma sessão** para todas as medições de tempo.
-- **Mesmo autor** implementando os dois lados, para reduzir viés de familiaridade prévia com uma linguagem.
-- **Reportar honestamente as assimetrias estruturais** (Lean tem Mathlib e táticas; Bend2 tem paralelismo nativo) em vez de tentar neutralizá-las artificialmente — o objetivo é mostrar o trade-off real, não empatar os números.
-- Todas as medições devem ser reprodutíveis: script de benchmark versionado no repositório, não números soltos no relatório.
+- **Mesmo hardware, mesma máquina, mesma sessão** para todas as medições de tempo — cumprido (ver `bench/last_run.log`).
+- **Mesmo autor** implementando os dois lados, para reduzir viés de familiaridade prévia com uma linguagem — cumprido.
+- **Reportar honestamente as assimetrias estruturais** (Lean tem Mathlib e táticas; Bend2 tem paralelismo nativo) em vez de tentar neutralizá-las artificialmente — o objetivo é mostrar o trade-off real, não empatar os números. Ver "Leitura dos números" acima.
+- Todas as medições devem ser reprodutíveis: script de benchmark versionado no repositório (`bench/run.sh`), não números soltos no relatório.
 
 ## 9. Roadmap e fases
 

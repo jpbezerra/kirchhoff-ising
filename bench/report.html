@@ -1,0 +1,603 @@
+<title>Relatório Kirchhoff-Ising</title>
+<style>
+  :root {
+    color-scheme: light;
+    --page:        #f9f9f7;
+    --surface:     #fcfcfb;
+    --surface-2:   #f3f2ee;
+    --ink:         #0b0b0b;
+    --ink-2:       #52514e;
+    --muted:       #898781;
+    --grid:        #e1e0d9;
+    --border:      rgba(11,11,11,0.10);
+    --border-2:    rgba(11,11,11,0.16);
+    --bend:        #2a78d6;
+    --bend-soft:   #cde2fb;
+    --lean:        #eb6834;
+    --lean-soft:   #fbdcc9;
+    --good:        #0ca30c;
+    --good-text:   #006300;
+    --warn:        #fab219;
+    --warn-text:   #8a5a00;
+    --crit:        #d03b3b;
+    --crit-soft:   #f8d9d9;
+    --warn-soft:   #fdecc6;
+    --good-soft:   #d7f0d3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --page:        #0d0d0d;
+      --surface:     #1a1a19;
+      --surface-2:   #221f1c;
+      --ink:         #ffffff;
+      --ink-2:       #c3c2b7;
+      --muted:       #898781;
+      --grid:        #2c2c2a;
+      --border:      rgba(255,255,255,0.10);
+      --border-2:    rgba(255,255,255,0.18);
+      --bend:        #3987e5;
+      --bend-soft:   #1c3a5c;
+      --lean:        #d95926;
+      --lean-soft:   #4a2e19;
+      --good:        #0ca30c;
+      --good-text:   #4fd44f;
+      --warn:        #fab219;
+      --warn-text:   #f5c869;
+      --crit:        #e66767;
+      --crit-soft:   #4a2323;
+      --warn-soft:   #4a3d1e;
+      --good-soft:   #1e3a1e;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page:        #0d0d0d;
+    --surface:     #1a1a19;
+    --surface-2:   #221f1c;
+    --ink:         #ffffff;
+    --ink-2:       #c3c2b7;
+    --muted:       #898781;
+    --grid:        #2c2c2a;
+    --border:      rgba(255,255,255,0.10);
+    --border-2:    rgba(255,255,255,0.18);
+    --bend:        #3987e5;
+    --bend-soft:   #1c3a5c;
+    --lean:        #d95926;
+    --lean-soft:   #4a2e19;
+    --good:        #0ca30c;
+    --good-text:   #4fd44f;
+    --warn:        #fab219;
+    --warn-text:   #f5c869;
+    --crit:        #e66767;
+    --crit-soft:   #4a2323;
+    --warn-soft:   #4a3d1e;
+    --good-soft:   #1e3a1e;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    padding-inline: 20px;
+  }
+  h1, h2, h3 {
+    font-family: "Fraunces", Georgia, serif;
+    font-weight: 600;
+    text-wrap: balance;
+    margin: 0;
+  }
+  code, .mono, .tab-nums {
+    font-family: "IBM Plex Mono", ui-monospace, "Cascadia Code", monospace;
+    font-variant-numeric: tabular-nums;
+  }
+  a { color: var(--bend); }
+
+  .wrap { max-width: 860px; margin: 0 auto; }
+
+  /* ---------- header ---------- */
+  header.hero {
+    padding-block: 40px 28px;
+    border-bottom: 1px solid var(--border);
+  }
+  .eyebrow {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+  h1.title { font-size: clamp(28px, 5vw, 42px); letter-spacing: -0.01em; }
+  .subtitle { color: var(--ink-2); font-size: 17px; margin-top: 10px; max-width: 62ch; }
+  .meta-row {
+    display: flex; gap: 18px; flex-wrap: wrap;
+    margin-top: 18px; font-size: 13px; color: var(--muted);
+  }
+  .meta-row span b { color: var(--ink-2); font-weight: 600; }
+
+  /* ---------- nav ---------- */
+  nav.pills {
+    position: sticky; top: env(safe-area-inset-top, 0px);
+    background: color-mix(in srgb, var(--page) 92%, transparent);
+    backdrop-filter: blur(6px);
+    z-index: 5;
+    display: flex; gap: 8px; overflow-x: auto;
+    padding-block: 10px;
+    border-bottom: 1px solid var(--border);
+    scrollbar-width: none;
+  }
+  nav.pills::-webkit-scrollbar { display: none; }
+  nav.pills a {
+    flex: none;
+    font-size: 13px; font-weight: 500;
+    color: var(--ink-2); text-decoration: none;
+    padding: 6px 12px; border-radius: 999px;
+    border: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  nav.pills a:hover { border-color: var(--border-2); color: var(--ink); }
+
+  section { padding-block: 36px; border-bottom: 1px solid var(--border); }
+  section:last-of-type { border-bottom: none; }
+  section > h2 { font-size: 24px; margin-bottom: 6px; }
+  .section-sub { color: var(--ink-2); font-size: 15px; margin-bottom: 22px; max-width: 68ch; }
+
+  /* ---------- stat tiles ---------- */
+  .stat-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1px; background: var(--border);
+    border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+  }
+  .stat {
+    background: var(--surface);
+    padding: 16px 18px;
+  }
+  .stat .label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  .stat .value { font-family: "Fraunces", serif; font-size: 30px; font-weight: 600; margin-top: 4px; }
+  .stat .value small { font-family: "IBM Plex Sans", sans-serif; font-size: 15px; color: var(--ink-2); font-weight: 400; }
+  .stat .foot { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  /* ---------- law status cards ---------- */
+  .law-grid { display: flex; flex-direction: column; gap: 10px; }
+  .law-card {
+    display: grid; grid-template-columns: 1fr auto auto; gap: 14px;
+    align-items: center;
+    padding: 14px 16px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  }
+  .law-name { font-family: "IBM Plex Mono", monospace; font-size: 13.5px; }
+  .law-desc { font-size: 13px; color: var(--ink-2); margin-top: 3px; font-family: "IBM Plex Sans", sans-serif; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 600;
+    padding: 4px 10px; border-radius: 999px;
+    white-space: nowrap;
+  }
+  .pill.ok   { background: var(--good-soft); color: var(--good-text); }
+  .pill.open { background: var(--crit-soft); color: var(--crit); }
+  .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .lang-tag { font-size: 11px; color: var(--muted); text-align: center; width: 46px; }
+
+  /* ---------- comparison bars ---------- */
+  .cmp { margin-block: 18px; }
+  .cmp-label { display: flex; justify-content: space-between; font-size: 13.5px; margin-bottom: 6px; }
+  .cmp-label .name { color: var(--ink-2); }
+  .cmp-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .cmp-row .tag { width: 64px; font-size: 12px; color: var(--muted); flex: none; text-align: right; }
+  .cmp-track { flex: 1; height: 22px; background: var(--surface-2); border-radius: 5px; overflow: hidden; position: relative; }
+  .cmp-fill { height: 100%; border-radius: 5px; display: flex; align-items: center; }
+  .cmp-fill.bend { background: var(--bend); }
+  .cmp-fill.lean { background: var(--lean); }
+  .cmp-val { font-size: 12px; font-weight: 600; color: white; padding-inline: 8px; white-space: nowrap; }
+  .cmp-val.outside { color: var(--ink); }
+  .legend { display: flex; gap: 18px; font-size: 13px; color: var(--ink-2); margin-bottom: 4px; }
+  .legend .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+
+  /* ---------- tables ---------- */
+  .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; background: var(--surface); }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); font-weight: 600; background: var(--surface-2); }
+  tr:last-child td { border-bottom: none; }
+  td.num { font-family: "IBM Plex Mono", monospace; text-align: right; white-space: nowrap; }
+  td.bend-c { color: var(--bend); font-weight: 600; }
+  td.lean-c { color: var(--lean); font-weight: 600; }
+
+  /* ---------- callouts / code ---------- */
+  .callout {
+    background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--bend);
+    border-radius: 0 10px 10px 0; padding: 14px 18px; font-size: 14.5px; margin-block: 16px;
+  }
+  .callout.warn { border-left-color: var(--warn); }
+  .callout.crit { border-left-color: var(--crit); }
+  .callout.good { border-left-color: var(--good); }
+  .callout p:first-child { margin-top: 0; }
+  .callout p:last-child { margin-bottom: 0; }
+  pre {
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 14px 16px; overflow-x: auto; font-size: 13px; line-height: 1.55;
+  }
+  pre code { font-family: "IBM Plex Mono", monospace; color: var(--ink); }
+  .comment { color: var(--muted); }
+
+  /* ---------- gotcha list ---------- */
+  .gotcha { padding: 16px 0; border-bottom: 1px solid var(--border); }
+  .gotcha:last-child { border-bottom: none; }
+  .gotcha-num { font-family: "IBM Plex Mono", monospace; font-size: 12px; color: var(--muted); }
+  .gotcha h3 { font-size: 16.5px; font-family: "IBM Plex Sans", sans-serif; font-weight: 600; margin-top: 4px; }
+  .gotcha p { font-size: 14.5px; color: var(--ink-2); margin: 6px 0 0; }
+
+  /* ---------- next steps ---------- */
+  ol.steps { list-style: none; margin: 0; padding: 0; counter-reset: step; }
+  ol.steps li {
+    counter-increment: step;
+    display: grid; grid-template-columns: 28px 1fr; gap: 12px;
+    padding: 12px 0; border-bottom: 1px solid var(--border);
+    font-size: 14.5px;
+  }
+  ol.steps li:last-child { border-bottom: none; }
+  ol.steps li::before {
+    content: counter(step);
+    font-family: "IBM Plex Mono", monospace; font-size: 13px; color: var(--muted);
+    width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--border-2);
+    display: flex; align-items: center; justify-content: center;
+  }
+  ol.steps b { color: var(--ink); }
+
+  /* ---------- timeline (circuit narrative) ---------- */
+  .flow { display: flex; flex-direction: column; gap: 0; margin-block: 18px; }
+  .flow-step {
+    display: grid; grid-template-columns: 22px 1fr; gap: 14px;
+    position: relative; padding-bottom: 22px;
+  }
+  .flow-step:last-child { padding-bottom: 0; }
+  .flow-dot {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--bend-soft); border: 1.5px solid var(--bend);
+    display: flex; align-items: center; justify-content: center;
+    font-family: "IBM Plex Mono", monospace; font-size: 10.5px; font-weight: 600; color: var(--bend);
+    flex: none; z-index: 1;
+  }
+  .flow-step:not(:last-child)::before {
+    content: ""; position: absolute; left: 10.5px; top: 22px; bottom: 0;
+    width: 1px; background: var(--border-2);
+  }
+  .flow-step h4 { font-size: 14.5px; font-weight: 600; margin: 0 0 4px; }
+  .flow-step p { font-size: 13.5px; color: var(--ink-2); margin: 0; }
+
+  footer {
+    padding-block: 30px 50px;
+    font-size: 12.5px; color: var(--muted);
+    text-align: center;
+  }
+
+  @media (max-width: 560px) {
+    .law-card { grid-template-columns: 1fr; }
+    .lang-tag { display: none; }
+  }
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+
+<div class="wrap">
+
+<header class="hero">
+  <div class="eyebrow">Bend2 vs Lean 4 &middot; provas formais</div>
+  <h1 class="title">Kirchhoff–Ising: relatório de status</h1>
+  <p class="subtitle">Comparação de esforço de prova entre Bend2 e Lean 4, implementando as mesmas leis sobre um circuito resistivo (grafo) e uma rede de spins Ising (grade 2D). Este relatório cobre o que foi provado, como, e os números reais do benchmark.</p>
+  <div class="meta-row">
+    <span>Sessão: <b>23/09/2026</b></span>
+    <span>Leis fechadas: <b>10 de 10</b></span>
+    <span>Lean: <b>5/5</b></span>
+    <span>Bend: <b>5/5</b></span>
+  </div>
+</header>
+
+<nav class="pills">
+  <a href="#resumo">Resumo</a>
+  <a href="#ising">Módulo Ising</a>
+  <a href="#circuit">Módulo Circuit</a>
+  <a href="#lean">Lado Lean</a>
+  <a href="#benchmark">Benchmark</a>
+  <a href="#gotchas">Gotchas do Bend</a>
+  <a href="#conclusoes">Conclusões</a>
+  <a href="#proximos">Próximos passos</a>
+</nav>
+
+<section id="resumo">
+  <h2>Resumo executivo</h2>
+  <p class="section-sub">As dez provas fecharam. A peça que faltava — o módulo Circuit do lado Bend — não era uma tarefa esquecida, era genuinamente difícil: reconstruir, sem táticas, um pedaço de teoria de números que uma biblioteca provada resolveria em uma linha.</p>
+
+  <div class="stat-grid">
+    <div class="stat">
+      <div class="label">Leis fechadas</div>
+      <div class="value">10<small>/10</small></div>
+      <div class="foot">5 leis &times; 2 linguagens</div>
+    </div>
+    <div class="stat">
+      <div class="label">Lean 4</div>
+      <div class="value">5<small>/5</small></div>
+      <div class="foot"><code>lake build</code> limpo, sem <code>sorry</code></div>
+    </div>
+    <div class="stat">
+      <div class="label">Bend2</div>
+      <div class="value">5<small>/5</small></div>
+      <div class="foot">zero <code>?TODO</code>, os dois módulos</div>
+    </div>
+    <div class="stat">
+      <div class="label">LOC de prova (Bend)</div>
+      <div class="value">1354</div>
+      <div class="foot">vs. 151 no Lean (ver benchmark)</div>
+    </div>
+  </div>
+
+  <div class="callout good">
+    <p><b>O que fechou nesta sessão:</b> as duas leis do módulo Circuit (<code>preserves_node_balance</code>, <code>loop_current_conserves_total</code>), que ficaram abertas por duas sessões inteiras. A peça que faltava era uma ponte entre "a hipótese de circulação vale para +1 de corrente" e "a lei precisa valer para qualquer <code>delta</code>" — que não sai de álgebra local, precisa de um argumento de contagem. Ver §Módulo Circuit para a narrativa completa, incluindo uma armadilha genuína (um "zero não-canônico" no inteiro sinal+magnitude) que mordeu a prova em pelo menos quatro pontos diferentes antes de ser sistematicamente evitada.</p>
+  </div>
+</section>
+
+<section id="ising">
+  <h2>Módulo Ising — completo dos dois lados</h2>
+  <p class="section-sub">Grade 2D de spins (+1/&minus;1). Três leis: inverter o mesmo spin duas vezes retorna ao estado original; um flip não muda as dimensões da grade; um flip muda a magnetização em exatamente 0, +2 ou &minus;2.</p>
+
+  <div class="law-grid">
+    <div class="law-card">
+      <div>
+        <div class="law-name">flip_twice_identity</div>
+        <div class="law-desc">Aplicar flip duas vezes na mesma posição retorna a grade original.</div>
+      </div>
+      <span class="pill ok">Lean ✓</span>
+      <span class="pill ok">Bend ✓</span>
+    </div>
+    <div class="law-card">
+      <div>
+        <div class="law-name">preserves_lattice_shape</div>
+        <div class="law-desc">Flip não muda o número de linhas da grade.</div>
+      </div>
+      <span class="pill ok">Lean ✓</span>
+      <span class="pill ok">Bend ✓</span>
+    </div>
+    <div class="law-card">
+      <div>
+        <div class="law-name">flip_changes_magnetization_by_two</div>
+        <div class="law-desc">Um flip muda a magnetização em exatamente 0, +2 ou &minus;2.</div>
+      </div>
+      <span class="pill ok">Lean ✓</span>
+      <span class="pill ok">Bend ✓</span>
+    </div>
+  </div>
+
+  <h3 style="margin-top:30px; font-size:19px;">A técnica que destravou a terceira lei</h3>
+  <p>A magnetização é calculada acumulando <code>(ups, downs)</code> por recursão direta sobre a grade — nunca uma soma parcial de <code>SInt</code>, só no final uma única chamada a <code>SInt.from_diff</code>. A prova de que mover um spin muda a magnetização em exatamente &plusmn;2 precisa de um fato de "invariância por deslocamento" que <em>parece</em> sair de graça por computação pura — e não sai: <code>from_diff.cmp</code> carrega os valores não descascados de <code>ups</code>/<code>downs</code> até seus ramos de magnitude; só o argumento de comparação (<code>Nat.cmp</code>) descasca sozinho. O <code>match</code> do Bend não consegue escrutinar uma expressão computada como <code>Nat.cmp(x, y)</code> diretamente — mas <em>consegue</em> vincular um parâmetro do tipo <code>Cmp</code> e casar sobre ele. A saída foi rotear a comparação por um parâmetro já avaliado:</p>
+
+  <pre><code><span class="comment"># c chega como parâmetro já calculado, não como Nat.cmp(x,y) inline</span>
+def from_diff_cmp_shift(c: Cmp, +x: Nat, +y: Nat)
+  -> {SInt.from_diff.cmp(c, 1n+x, 1n+y) == SInt.from_diff.cmp(c, x, y) : SInt}:
+  match c:
+    case LT{}: {==}
+    case EQ{}: {==}
+    case GT{}: {==}
+
+def shift_invariant(+x: Nat, +y: Nat)
+  -> {SInt.from_diff(1n+x, 1n+y) == SInt.from_diff(x, y) : SInt}:
+  from_diff_cmp_shift(Nat.cmp(x, y), x, y)</code></pre>
+
+  <p>Uma vez com <code>shift_invariant</code> genuinamente provado, os lemas de passo único (<code>diff_inc</code>/<code>diff_dec</code>) saíram por indução direta, e como a magnetização só chama <code>SInt.add</code>/<code>from_diff</code> <strong>uma única vez</strong>, no fim, toda a indução sobre linhas/grade ficou inteiramente no nível de <code>Nat</code>. É a peça central de <code>bend/ising/PROOF.bend</code> (474 linhas): <code>count_rel</code>, <code>lift_up</code>/<code>lift_down</code>, <code>row_pair_rel</code>, <code>rows_pair_rel</code>, <code>mag_law</code>. Essa mesma técnica — fatorar uma expressão travada por um parâmetro casável — reaparece, generalizada, no módulo Circuit abaixo.</p>
+</section>
+
+<section id="circuit">
+  <h2>Módulo Circuit — a peça difícil, fechada</h2>
+  <p class="section-sub">Circuito resistivo como grafo (lista de arestas). Duas leis: aplicar uma corrente de malha não muda a corrente líquida de nenhum nó (se o laço for um circuito fechado de verdade); o mesmo vale somado sobre uma lista de nós.</p>
+
+  <div class="law-grid">
+    <div class="law-card">
+      <div>
+        <div class="law-name">preserves_node_balance</div>
+        <div class="law-desc">Aplicar +delta a um laço não muda o balanço de corrente de um nó n, se o laço for uma circulação genuína em n.</div>
+      </div>
+      <span class="pill ok">Lean ✓</span>
+      <span class="pill ok">Bend ✓</span>
+    </div>
+    <div class="law-card">
+      <div>
+        <div class="law-name">loop_current_conserves_total</div>
+        <div class="law-desc">O mesmo, somado sobre uma lista fixa de nós — corolário direto da anterior.</div>
+      </div>
+      <span class="pill ok">Lean ✓</span>
+      <span class="pill ok">Bend ✓</span>
+    </div>
+  </div>
+
+  <h3 style="margin-top:30px; font-size:19px;">Por que o truque do Ising não bastava aqui</h3>
+  <p><code>add_loop_current</code> pode tocar <em>várias</em> arestas ao mesmo tempo, cada uma contribuindo um <code>delta:SInt</code> <em>arbitrário</em>, acumulado via <code>SInt.add</code> repetido. Não há um único ponto de conversão final pra adiar — a indução precisa reassociar uma soma parcial a cada passo, o que exige de verdade associatividade geral:</p>
+  <pre><code>{SInt.add(x, SInt.add(y, z)) == SInt.add(SInt.add(x, y), z) : SInt}</code></pre>
+  <p>Lean fecha o equivalente com uma chamada de <code>ring</code>/<code>omega</code>. Bend não tem táticas — isso é construção de termo, caso a caso. E mesmo depois de ter associatividade, faltava uma segunda peça, sem paralelo do lado Ising: uma ponte de <em>contagem</em> entre a hipótese do enunciado (circulação testada com +1 de corrente) e a lei (que precisa valer para qualquer <code>delta</code>).</p>
+
+  <h3 style="margin-top:28px; font-size:19px;">A cadeia completa, em cinco etapas</h3>
+  <div class="flow">
+    <div class="flow-step">
+      <div class="flow-dot">1</div>
+      <div><h4>Associatividade geral de <code>SInt.add</code></h4>
+      <p>8 casos por sinal (2³), cada um fechado com o lema de conversão que já bate com a forma real que <code>SInt.add</code> produz naquele caso — nunca inventando uma forma canônica que não existe. Bloqueio histórico do projeto; fechado em <code>bend/tests/sint_laws.bend</code>.</p></div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-dot">2</div>
+      <div><h4><code>node_balance_map_update</code></h4>
+      <p>A lei estrutural principal: atualizar toda aresta do laço por <code>delta</code> desloca o balanço de um nó em exatamente a soma, sobre as arestas que tocam esse nó, de &plusmn;<code>delta</code>. Provada por indução, usando uma identidade de "trocar quatro termos" (<code>four_term_swap</code>) construída só com associatividade+comutatividade.</p></div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-dot">3</div>
+      <div><h4>A armadilha do zero não-canônico</h4>
+      <p><code>SInt{False,0n}</code> é um termo válido e distinto de <code>SInt{True,0n}</code> — nunca produzido por <code>from_diff</code>, mas alcançável por um <code>delta</code> escolhido pelo usuário. <code>{add(x,zero())==x}</code> é <strong>falsa</strong> exatamente nesse ponto. Mordeu a prova quatro vezes; cada uma resolvida evitando a identidade falsa (recursão por filtro em vez de zero-padding, uma definição de "somar k vezes" que nunca isola esse caso, ou provando a identidade só para valores concretamente seguros).</p></div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-dot">4</div>
+      <div><h4>Contagem: de "+1" para "delta arbitrário"</h4>
+      <p>Dois contadores (<code>touch_to</code>/<code>touch_from</code>: quantas arestas do laço entram/saem de um nó) mais um lema de correspondência (<code>char_correspondence</code>) que mostra, por indução, que a soma real é exatamente esses contadores multiplicados por &plusmn;<code>delta</code> — para <em>qualquer</em> <code>delta</code>, incluindo o valor +1 da hipótese.</p></div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-dot">5</div>
+      <div><h4>Eliminação por absurdo, sem tipo <code>Void</code></h4>
+      <p>A hipótese de circulação (com +1) força os dois contadores a serem iguais — via um lema (<code>from_diff_zero_implies_eq</code>) cujos dois casos-base impossíveis se resolvem projetando a hipótese (via <code>Equal.cong</code>) direto na igualdade de <code>Nat</code> necessária. Uma vez iguais, a soma cancela para qualquer <code>delta</code> (<code>repeat_add_cancel</code>), fechando as duas leis.</p></div>
+    </div>
+  </div>
+
+  <p style="margin-top:8px;">O trabalho de verdade vive em dois arquivos independentemente checáveis: <code>bend/tests/sint_laws.bend</code> (308 linhas, associatividade geral) e <code>bend/tests/circuit_assoc.bend</code> (499 linhas, ~30 lemas — a ponte de contagem). <code>bend/circuit/PROOF.bend</code> (73 linhas) hoje é só a "cola" que aplica tudo isso às duas leis. Ver <code>REPORT.md</code> §4 no repositório para a derivação completa, caso a caso.</p>
+</section>
+
+<section id="lean">
+  <h2>Lado Lean — tudo fechado, dois ajustes valiosos</h2>
+  <p class="section-sub"><code>lake build</code> passa limpo para o projeto inteiro: <code>Circuit.lean</code>, <code>Ising.lean</code>, <code>Laws.lean</code> (as 5 leis), <code>Tests.lean</code>. Dois problemas reais foram encontrados e corrigidos.</p>
+
+  <div class="callout warn">
+    <p><b>Colisão de nome com o Mathlib.</b> <code>Ising.lean</code> tinha uma <code>structure Lattice</code> no nível superior, que colidia com a classe <code>Order.Lattice</code> do próprio Mathlib (ambas geram <code>Lattice.noConfusion</code> no mesmo namespace). O build falhava com <code>environment already contains 'Lattice.noConfusion'</code>. Correção: envolver o arquivo inteiro em <code>namespace Ising ... end Ising</code>. Lição geral: nunca deixe um tipo de domínio sem namespace quando o Mathlib é dependência.</p>
+  </div>
+
+  <div class="callout">
+    <p><b>Reformulação de <code>nodeBalanceDelta</code>.</b> A versão original usava duas chamadas de <code>List.filter</code> encadeadas; sob <code>simp</code>/<code>by_cases</code>, o Lean fundia os dois filtros numa única predicada composta de formas imprevisíveis. A correção foi trocar por um único acumulador <code>Int</code> corrido por recursão estrutural direta — espelhando <code>List.sum</code> — deixando <code>split_ifs</code>/<code>simp_all</code>/<code>ring</code> fecharem de forma confiável. É a <strong>mesma ideia estrutural</strong> que, do lado Bend, tornou a indução do Circuit possível (etapa 2 acima) — convergência independente para a mesma solução.</p>
+  </div>
+</section>
+
+<section id="benchmark">
+  <h2>Benchmark</h2>
+  <p class="section-sub">Números reais, medidos nesta máquina, nesta sessão, via <code>bash bench/run.sh</code> (script versionado — reproduza com <code>bash bench/run.sh</code>). Saída bruta em <code>bench/last_run.log</code>.</p>
+
+  <h3 style="font-size:17px; margin-bottom:10px;">Linhas de código de prova</h3>
+  <div class="legend"><span><span class="sw" style="background:var(--bend)"></span>Bend2</span><span><span class="sw" style="background:var(--lean)"></span>Lean 4</span></div>
+  <div class="cmp">
+    <div class="cmp-row">
+      <div class="tag">Bend</div>
+      <div class="cmp-track"><div class="cmp-fill bend" style="width:100%"><span class="cmp-val">1354 LOC</span></div></div>
+    </div>
+    <div class="cmp-row">
+      <div class="tag">Lean</div>
+      <div class="cmp-track"><div class="cmp-fill lean" style="width:11.2%"><span class="cmp-val outside" style="margin-left:2px;">151 LOC</span></div></div>
+    </div>
+  </div>
+  <p style="font-size:13.5px; color:var(--ink-2);">Bend = <code>ising/PROOF.bend</code>(474) + <code>circuit/PROOF.bend</code>(73) + <code>tests/circuit_assoc.bend</code>(499) + <code>tests/sint_laws.bend</code>(308), <strong>as 5 leis fechadas</strong>. Lean = <code>Laws.lean</code>(151), enunciado e prova misturados. O enunciado das leis do lado Bend fica em arquivos <code>LAWS.bend</code> separados (33+57=90 linhas), fora dessa contagem — mesmo assim Lean é ~9&times; menor.</p>
+
+  <h3 style="font-size:17px; margin: 28px 0 10px;">Linhas de código não-prova (tipos e funções)</h3>
+  <div class="cmp">
+    <div class="cmp-row">
+      <div class="tag">Bend</div>
+      <div class="cmp-track"><div class="cmp-fill bend" style="width:100%"><span class="cmp-val">297 LOC</span></div></div>
+    </div>
+    <div class="cmp-row">
+      <div class="tag">Lean</div>
+      <div class="cmp-track"><div class="cmp-fill lean" style="width:25.3%"><span class="cmp-val outside" style="margin-left:2px;">75 LOC</span></div></div>
+    </div>
+  </div>
+  <p style="font-size:13.5px; color:var(--ink-2);">Bend = <code>lattice.bend</code>(93) + <code>circuit.bend</code>(152) + <code>int.bend</code>(52, compartilhado). Boa parte da diferença é <code>int.bend</code> reimplementando do zero um tipo inteiro assinado que Lean ganha de graça do core/Mathlib.</p>
+
+  <h3 style="font-size:17px; margin: 28px 0 10px;">Automação vs. termo manual</h3>
+  <div class="stat-grid" style="margin-bottom: 4px;">
+    <div class="stat">
+      <div class="label">Lean — fechadas só com tática</div>
+      <div class="value">5<small>/5</small></div>
+      <div class="foot"><code>induction</code>, <code>simp</code>, <code>omega</code>, <code>ring</code>, <code>split_ifs</code></div>
+    </div>
+    <div class="stat">
+      <div class="label">Bend — termo explícito</div>
+      <div class="value">100<small>%</small></div>
+      <div class="foot">sem táticas por design</div>
+    </div>
+  </div>
+
+  <h3 style="font-size:17px; margin: 28px 0 10px;">Tempo de checagem e execução</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Medição</th><th>Comando</th><th class="num">Execução 1</th><th class="num">Execução 2</th><th class="num">Execução 3</th></tr></thead>
+      <tbody>
+        <tr><td class="bend-c">Checagem — Ising</td><td class="mono">bend ising/PROOF.bend</td><td class="num">4.55s</td><td class="num">2.26s</td><td class="num">2.44s</td></tr>
+        <tr><td class="bend-c">Checagem — Circuit (cola)</td><td class="mono">bend circuit/PROOF.bend</td><td class="num">3.28s</td><td class="num">1.61s</td><td class="num">2.29s</td></tr>
+        <tr><td class="bend-c">Checagem — Circuit (lemas)</td><td class="mono">bend tests/circuit_assoc.bend</td><td class="num">2.05s</td><td class="num">2.34s</td><td class="num">1.70s</td></tr>
+        <tr><td class="lean-c">Checagem — Laws (incremental)</td><td class="mono">lake build Laws</td><td class="num">413.40s</td><td class="num">30.90s</td><td class="num">20.88s</td></tr>
+        <tr><td class="bend-c">Execução — demo</td><td class="mono">bend main.bend</td><td class="num">2.79s</td><td class="num">2.07s</td><td class="num">1.58s</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="font-size:13.5px; color:var(--ink-2); margin-top: 10px;">Lean's 3 execuções caem porque o cache do Lake aquece entre rodadas — 20.88s (a terceira) é o número comparável a "checar uma alteração pontual" num projeto já compilado antes. Execução do Lean não é medida separadamente: <code>Tests.lean</code> só tem <code>#eval</code>, que roda como efeito colateral do type-check.</p>
+
+  <div class="callout crit">
+    <p><b>Leitura honesta, não um veredito.</b> Bend é dramaticamente mais rápido por execução — mas essa comparação favorece Bend na direção errada: o binário do Bend não carrega uma biblioteca do tamanho do Mathlib. Não é uma medida de qual <em>checker</em> é mais eficiente; é uma medida de qual dependência cada checagem paga. Da mesma forma, o esforço de prova ~9&times; maior do Bend não é culpa da linguagem em si — é o preço de não ter <code>omega</code>/<code>ring</code> e de reimplementar aritmética assinada e um argumento de contagem do zero.</p>
+  </div>
+</section>
+
+<section id="gotchas">
+  <h2>Gotchas do compilador Bend</h2>
+  <p class="section-sub">Todos raiz-causados via reprodução mínima contra o compilador real — não são suposições. Os dois últimos são novos desta sessão.</p>
+
+  <div class="gotcha">
+    <div class="gotcha-num">01</div>
+    <h3>Nome de def igual a um alias de import quebra ao ser importado por outro arquivo</h3>
+    <p><code>import ./circuit.bend as Circuit</code> + <code>def Circuit.foo(...): ...</code> no <em>mesmo</em> arquivo funciona quando rodado direto, mas falha com <code>expected: a defined name, observed: Circuit.foo</code> assim que um segundo arquivo faz <code>import ./esse_arquivo.bend as X</code>.</p>
+  </div>
+  <div class="gotcha">
+    <div class="gotcha-num">02</div>
+    <h3>Referência a frente quebra, mesmo sem recursão</h3>
+    <p>Uma função auxiliar definida <em>textualmente antes</em> de outra que ela chama falha com o mesmo erro confuso — mesmo sem nenhuma das duas ser recursiva e sem import envolvido.</p>
+  </div>
+  <div class="gotcha">
+    <div class="gotcha-num">03</div>
+    <h3><code>Nat & Nat</code> não serve como tipo numa igualdade</h3>
+    <p>Pares via <code>&amp;</code> são sempre <code>Kind(&amp;1)</code> (<code>Type</code>), nunca <code>Data</code> — mas <code>{a == b : T}</code> exige <code>T</code> com kind <code>Data</code>. Correção: definir um record próprio sempre que for preciso enunciar igualdades sobre um valor tipo-par.</p>
+  </div>
+  <div class="gotcha">
+    <div class="gotcha-num">04</div>
+    <h3><code>Nat.cmp</code>/<code>Nat.sub</code> só descascam de graça com construtor visível dos dois lados</h3>
+    <p><code>Nat.cmp(1n+X, 1n+Y)</code> reduz de graça para <code>Nat.cmp(X, Y)</code> (mesmo vale para <code>Nat.sub</code>), mesmo com <code>X</code>,<code>Y</code> simbólicos. Mas contra um argumento opaco não visivelmente <code>0n</code>/<code>1n+_</code>, trava.</p>
+  </div>
+  <div class="gotcha">
+    <div class="gotcha-num">05</div>
+    <h3>A saída para "match não escrutina expressão computada" generaliza para provas</h3>
+    <p>Fatorar a expressão travada por um parâmetro de uma função auxiliar (casável, porque é <em>seu próprio</em> parâmetro) destrava tanto computação quanto obrigações de prova — confirmado repetidamente nesta sessão, inclusive para booleanos derivados de comparações estruturais arbitrárias, não só <code>Nat.cmp</code>.</p>
+  </div>
+  <div class="gotcha">
+    <div class="gotcha-num">06</div>
+    <h3><code>Exists</code> funciona fora de blocos <code>law</code></h3>
+    <p><code>Exists(A, x => B(x))</code> do <code>Base</code> funciona como expressão <code>Type</code> comum fora de <code>law</code>. Construa uma testemunha com <code>(valor, prova)</code>, igual a um par comum.</p>
+  </div>
+  <div class="gotcha">
+    <div class="gotcha-num">07</div>
+    <h3>Eliminação por absurdo sem <code>Void</code>/<code>Empty</code> explícito</h3>
+    <p>Bend não expõe um tipo vazio com eliminador embutido nesta base. Ainda assim, dado um absurdo <code>h: {True{} == False{} : Bool}</code>, dá pra produzir uma prova de <strong>qualquer</strong> igualdade-alvo <code>{X == Y : T}</code>: <code>Equal.cong(Bool, T, b =&gt; Bool.pick(T, b, X, Y), True{}, False{}, h)</code>. <code>Bool.pick</code> reduz livremente nos dois lados (literais), então o resultado normaliza exatamente para <code>{X == Y}</code> — confirmado contra o compilador real. Generaliza para qualquer absurdo com discriminador (<code>Cmp</code>, projeção de campo de <code>SInt</code>, etc.).</p>
+  </div>
+  <div class="gotcha">
+    <div class="gotcha-num">08</div>
+    <h3><code>Type</code> é o universo; <code>Set</code> já é outra coisa</h3>
+    <p>Declarar um parâmetro genérico como <code>T: Set</code> compila silenciosamente errado — <code>Set</code> já existe no <code>Base</code> como outro tipo, então o parâmetro assume esse tipo em vez de ser um universo. Use <code>T: Type</code>. E note: <code>Equal.cong</code>/<code>Equal.trans</code> exigem que os argumentos de tipo concretos sejam <code>Data</code>, não a variável de universo em si — uma função "genérica" que os usa internamente precisa ser instanciada por tipo concreto, não fica polimórfica até o fim.</p>
+  </div>
+</section>
+
+<section id="conclusoes">
+  <h2>Conclusões — o que essa comparação realmente mostra</h2>
+  <p class="section-sub">Com as 10 provas fechadas, os números confirmam com dados reais a hipótese qualitativa de partida deste projeto.</p>
+  <div class="callout">
+    <p><b>Lean com Mathlib é estruturalmente mais barato para álgebra "chata"</b> (associatividade, aritmética de sinais, contagem) — não por a linguagem Lean ser "melhor", mas por trazer de graça uma década de lemas de <code>Nat</code>/<code>Int</code> já provados e táticas de decisão que os aplicam automaticamente. Em Bend, cada um foi redescoberto e escrito à mão.</p>
+  </div>
+  <div class="callout warn">
+    <p><b>Isso não é grátis nem no Lean:</b> as duas correções do lado Lean (colisão de namespace com Mathlib; acumulador-fold vs. recursão direta) mostram que "ter uma biblioteca gigante" tem sua própria fricção — e a mesma armadilha estrutural (fold vs. recursão direta) mordeu os dois lados, de forma independente.</p>
+  </div>
+  <div class="callout crit">
+    <p><b>A armadilha do zero não-canônico (módulo Circuit, etapa 3) é o achado mais transferível desta sessão</b> — não é específica de Bend. Qualquer representação de inteiro por sinal+magnitude tem esse ponto cego: dois valores distintos representando "zero", só um produzido por construção limpa. Um <code>Int</code> em complemento-de-dois (como o do Lean/Mathlib) não tem esse problema — vantagem de representação, não de linguagem.</p>
+  </div>
+  <p>Bend2 ganha limpo em tempo de checagem por execução, mas isso mede o tamanho da dependência carregada, não a eficiência do verificador em si. Nenhuma das duas linguagens "perdeu": o trade-off é real — Lean troca "escrever seu próprio kit de aritmética" por "aprender a dirigir táticas que às vezes não fecham de primeira"; Bend troca "nunca lutar contra uma tática opaca" por "construir cada fato de aritmética à mão, uma vez, reutilizável depois".</p>
+</section>
+
+<section id="proximos">
+  <h2>Próximos passos</h2>
+  <ol class="steps">
+    <li><b>Paralelismo de CPU</b> (fase avançada, opcional) — medir speedup numa operação <code>sweep</code> sobre a grade Ising, usando a metodologia de bend2.dev/learn/measuring-speedup. Escopo novo, não uma continuação das provas já fechadas.</li>
+    <li><b>GPU</b> — fora de escopo nesta máquina (sem GPU disponível).</li>
+    <li><b>Lei <code>resume</code></b> (fase avançada, opcional) — rodar a simulação em lotes é equivalente a rodar tudo de uma vez, nos dois módulos.</li>
+    <li><b>Consolidação cosmética (opcional)</b> — <code>bend/tests/circuit_assoc.bend</code> hoje vive num arquivo de "teste" por escolha deliberada (mantém cada lema independentemente checável durante o desenvolvimento); poderia mover para <code>bend/circuit/proofs/</code> sem mudar nenhum conteúdo matemático.</li>
+  </ol>
+</section>
+
+<footer>Relatório gerado a partir de <code>bend/</code>, <code>lean/</code> e <code>bench/run.sh</code> deste repositório. Ver <code>REPORT.md</code> para a versão completa em texto, com a derivação matemática caso a caso.</footer>
+
+</div>
